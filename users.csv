@@ -1,0 +1,59 @@
+# 🔐 REAL LOGIN SYSTEM
+
+import hashlib
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def load_users():
+    if os.path.exists("users.csv"):
+        return pd.read_csv("users.csv")
+    else:
+        return pd.DataFrame(columns=["email", "password"])
+
+def save_user(email, password):
+    df = load_users()
+    new_user = pd.DataFrame([{
+        "email": email,
+        "password": hash_password(password)
+    }])
+    df = pd.concat([df, new_user], ignore_index=True)
+    df.to_csv("users.csv", index=False)
+
+def check_login(email, password):
+    df = load_users()
+    hashed = hash_password(password)
+
+    user = df[(df["email"] == email) & (df["password"] == hashed)]
+    return not user.empty
+
+# SESSION
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+# 🔐 LOGIN / REGISTER UI
+def auth():
+    st.title("🔐 AI Marketing Login")
+
+    choice = st.radio("Select", ["Login", "Register"])
+
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+
+    if choice == "Register":
+        if st.button("Create Account"):
+            save_user(email, password)
+            st.success("✅ Account Created! Now login.")
+
+    else:
+        if st.button("Login"):
+            if check_login(email, password):
+                st.session_state.logged_in = True
+                st.success("✅ Login Successful!")
+            else:
+                st.error("❌ Invalid Email or Password")
+
+# STOP IF NOT LOGGED IN
+if not st.session_state.logged_in:
+    auth()
+    st.stop()
